@@ -51,21 +51,14 @@ void getDummySensorData(
     float& temperature,
     float& humidity
 ) {
-
     if (NODE_ID == 1) {
-
         temperature = 25.50f;
         humidity = 70.00f;
-
     } else if (NODE_ID == 2) {
-
         temperature = 26.50f;
         humidity = 71.00f;
-
     } else {
-
         temperature = 20.00f + NODE_ID;
-
         humidity = 60.00f + NODE_ID;
     }
 }
@@ -77,32 +70,25 @@ void getDummySensorData(
 void sendSensorData(
     uint16_t requestSequence
 ) {
-
     SensorDataPacket packet{};
-
     packet.header.protocolVersion =
         PROTOCOL_VERSION;
-
     packet.header.packetType =
         static_cast<uint8_t>(
             PacketType::SENSOR_DATA
         );
-
     packet.header.nodeId =
         NODE_ID;
-
     packet.header.flags = 0;
 
     // Same sequence as request
     packet.header.sequence =
         requestSequence;
-
     packet.header.payloadLength =
         sizeof(SensorDataPayload);
 
     // CRC disabled in Phase 2A
     packet.header.crc16 = 0;
-
     packet.header.reserved = 0;
 
     getDummySensorData(
@@ -118,7 +104,6 @@ void sendSensorData(
         );
 
     if (result == ESP_OK) {
-
         Serial.printf(
             "TX: SENSOR_DATA | Node=%u | Seq=%u | T=%.2f C | RH=%.2f %%\n",
             NODE_ID,
@@ -128,7 +113,6 @@ void sendSensorData(
         );
 
     } else {
-
         Serial.printf(
             "TX ERROR: %d\n",
             result
@@ -147,16 +131,13 @@ void onDataReceived(
 ){
 
     if (len != sizeof(Header)) {
-
         Serial.println(
             "RX: Invalid packet size"
         );
-
         return;
     }
 
     Header request{};
-
     memcpy(
         &request,
         data,
@@ -165,7 +146,6 @@ void onDataReceived(
 
     if (request.protocolVersion !=
         PROTOCOL_VERSION) {
-
         return;
     }
 
@@ -173,12 +153,10 @@ void onDataReceived(
         static_cast<uint8_t>(
             PacketType::DATA_REQUEST
         )) {
-
         return;
     }
 
     if (request.nodeId != NODE_ID) {
-
         return;
     }
 
@@ -202,21 +180,15 @@ void onDataReceived(
 // =====================================================
 
 bool setupEspNow() {
-
     WiFi.mode(WIFI_STA);
-
     Serial.print("Node MAC: ");
-
     Serial.println(
         WiFi.macAddress()
     );
-
     if (esp_now_init() != ESP_OK) {
-
         Serial.println(
             "ERROR: ESP-NOW initialization failed"
         );
-
         return false;
     }
 
@@ -233,18 +205,15 @@ bool setupEspNow() {
     );
 
     peerInfo.channel = 0;
-
     peerInfo.encrypt = false;
 
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-
         Serial.println(
             "ERROR: Failed to add Base peer"
         );
 
         return false;
     }
-
     return true;
 }
 
@@ -253,41 +222,30 @@ bool setupEspNow() {
 // =====================================================
 
 void setup() {
-
     Serial.begin(115200);
-
     delay(1000);
-
     Serial.println();
-
     Serial.println(
         "================================"
     );
-
     Serial.println(
         "WeatherBus V4.1"
     );
-
     Serial.printf(
         "PHASE 2A - Node %u\n",
         NODE_ID
     );
-
     Serial.println(
         "================================"
     );
-
     if (!setupEspNow()) {
-
         Serial.println(
             "SYSTEM HALTED"
         );
-
         while (true) {
             delay(1000);
         }
     }
-
     Serial.println(
         "ESP-NOW ready"
     );
