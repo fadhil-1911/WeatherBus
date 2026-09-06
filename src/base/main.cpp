@@ -6,7 +6,7 @@
 /*
   Module  : Base Station - Main Application
   Transport : ESP-NOW
-  Phase   : PHASE 2A - SHT41
+  Phase   : PHASE 2B.1 - Invalid Packet Handling
 */
 
 #include <Arduino.h>
