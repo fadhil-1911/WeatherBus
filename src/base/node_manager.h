@@ -1,16 +1,14 @@
 #pragma once
 #include <Arduino.h>
 
-struct NodeInfo
-{
+struct NodeInfo{
     uint8_t nodeId;
     uint8_t mac[6];
     bool online;
     uint32_t lastResponse;
 };
 
-class NodeManager
-{
+class NodeManager{
 
 public:
     NodeManager();
