@@ -2,10 +2,9 @@
 #include <Arduino.h>
 #include "node_manager.h"
 
-class PollingEngine
-{
-public:
-    PollingEngine(NodeManager &manager);
+class PollingEngine {
+  public:
+    PollingEngine(NodeManager& manager);
     void begin();
     void update();
     void onSensorData(
@@ -14,15 +13,14 @@ public:
         float temperature,
         float humidity);
 
-private:
-    enum class State
-    {
+  private:
+    enum class State {
         IDLE,
         SEND_REQUEST,
         WAIT_RESPONSE
     };
 
-    NodeManager &nodeManager;
+    NodeManager& nodeManager;
     State state;
     uint8_t currentNodeIndex;
     uint16_t sequenceNumber;

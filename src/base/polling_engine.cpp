@@ -6,8 +6,8 @@
 
 using namespace WeatherBus;
 
-PollingEngine::PollingEngine(NodeManager &manager)
-    : nodeManager(manager){
+PollingEngine::PollingEngine(NodeManager& manager)
+    : nodeManager(manager) {
     state = State::IDLE;
     currentNodeIndex = 0;
     sequenceNumber = 0;
@@ -15,18 +15,17 @@ PollingEngine::PollingEngine(NodeManager &manager)
     requestTimestamp = 0;
 }
 
-void PollingEngine::begin(){
+void PollingEngine::begin() {
     state = State::IDLE;
     stateTimestamp = millis();
     Serial.println("Polling Engine ready");
 }
 
-void PollingEngine::update(){
+void PollingEngine::update() {
     uint32_t now = millis();
-    switch (state)
-    {
+    switch (state) {
     case State::IDLE:
-        if (now - stateTimestamp >= POLL_INTERVAL_MS){
+        if (now - stateTimestamp >= POLL_INTERVAL_MS) {
             state = State::SEND_REQUEST;
         }
         break;
@@ -34,16 +33,16 @@ void PollingEngine::update(){
         sendRequest();
         break;
     case State::WAIT_RESPONSE:
-        if (now - requestTimestamp >= RESPONSE_TIMEOUT_MS){
+        if (now - requestTimestamp >= RESPONSE_TIMEOUT_MS) {
             handleTimeout();
         }
         break;
     }
 }
 
-void PollingEngine::sendRequest(){
-    NodeInfo *node = nodeManager.getNode(currentNodeIndex);
-    if (node == nullptr){
+void PollingEngine::sendRequest() {
+    NodeInfo* node = nodeManager.getNode(currentNodeIndex);
+    if (node == nullptr) {
         moveToNextNode();
         return;
     }
@@ -59,8 +58,8 @@ void PollingEngine::sendRequest(){
     request.crc16 = 0;
     request.reserved = 0;
 
-    esp_err_t result = esp_now_send(node->mac, reinterpret_cast<uint8_t *>(&request), sizeof(request));
-    if (result != ESP_OK){
+    esp_err_t result = esp_now_send(node->mac, reinterpret_cast<uint8_t*>(&request), sizeof(request));
+    if (result != ESP_OK) {
         Serial.printf("TX ERROR: Node %u | ESP-NOW error %d\n", node->nodeId, result);
         handleTimeout();
         return;
@@ -72,14 +71,14 @@ void PollingEngine::sendRequest(){
 }
 
 void PollingEngine::onSensorData(
-    uint8_t nodeId, 
-    uint16_t sequence, 
-    float temperature, 
+    uint8_t nodeId,
+    uint16_t sequence,
+    float temperature,
     float humidity) {
 
-    NodeInfo *node = nodeManager.getNodeById(nodeId);
+    NodeInfo* node = nodeManager.getNodeById(nodeId);
 
-    if (node == nullptr){
+    if (node == nullptr) {
         Serial.printf("RX: Unknown Node %u\n", nodeId);
         return;
     }
@@ -87,7 +86,7 @@ void PollingEngine::onSensorData(
     // -------------------------------------------------
     // Only accept response from current node
     // -------------------------------------------------
-    if (node->nodeId != nodeManager.getNode(currentNodeIndex)->nodeId){
+    if (node->nodeId != nodeManager.getNode(currentNodeIndex)->nodeId) {
         Serial.printf("RX: Unexpected Node %u\n", nodeId);
         return;
     }
@@ -105,9 +104,9 @@ void PollingEngine::onSensorData(
     moveToNextNode();
 }
 
-void PollingEngine::handleTimeout(){
-    NodeInfo *node = nodeManager.getNode(currentNodeIndex);
-    if (node != nullptr){
+void PollingEngine::handleTimeout() {
+    NodeInfo* node = nodeManager.getNode(currentNodeIndex);
+    if (node != nullptr) {
         nodeManager.markOffline(node->nodeId);
 
         Serial.printf("TIMEOUT: Node %u did not respond within %lu ms\n", node->nodeId, RESPONSE_TIMEOUT_MS);
@@ -115,9 +114,9 @@ void PollingEngine::handleTimeout(){
     moveToNextNode();
 }
 
-void PollingEngine::moveToNextNode(){
+void PollingEngine::moveToNextNode() {
     currentNodeIndex++;
-    if (currentNodeIndex >= nodeManager.getNodeCount()){
+    if (currentNodeIndex >= nodeManager.getNodeCount()) {
         currentNodeIndex = 0;
     }
 

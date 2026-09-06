@@ -23,8 +23,8 @@ PollingEngine pollingEngine(nodeManager);
 // ESP-NOW RX callback
 // =====================================================
 
-void onDataReceived(const uint8_t *mac, const uint8_t *data, int len) {
-    if (len != sizeof(WeatherBus::SensorDataPacket)){
+void onDataReceived(const uint8_t* mac, const uint8_t* data, int len) {
+    if (len != sizeof(WeatherBus::SensorDataPacket)) {
         Serial.println("RX: Invalid packet size");
         return;
     }
@@ -34,11 +34,11 @@ void onDataReceived(const uint8_t *mac, const uint8_t *data, int len) {
         Serial.println("RX: Invalid protocol version");
         return;
     }
-    if (packet.header.packetType != static_cast<uint8_t>(WeatherBus::PacketType::SENSOR_DATA)){
+    if (packet.header.packetType != static_cast<uint8_t>(WeatherBus::PacketType::SENSOR_DATA)) {
         Serial.println("RX: Unexpected packet type");
         return;
     }
-    if (packet.header.payloadLength != sizeof(WeatherBus::SensorDataPayload)){
+    if (packet.header.payloadLength != sizeof(WeatherBus::SensorDataPayload)) {
         Serial.println("RX: Invalid payload length");
         return;
     }
@@ -52,10 +52,10 @@ void onDataReceived(const uint8_t *mac, const uint8_t *data, int len) {
 // =====================================================
 // Add all Node peers
 // =====================================================
-bool setupPeers(){
-    for (uint8_t i = 0; i < nodeManager.getNodeCount(); i++){
-        NodeInfo *node = nodeManager.getNode(i);
-        if (node == nullptr){
+bool setupPeers() {
+    for (uint8_t i = 0; i < nodeManager.getNodeCount(); i++) {
+        NodeInfo* node = nodeManager.getNode(i);
+        if (node == nullptr) {
             continue;
         }
 
@@ -64,7 +64,7 @@ bool setupPeers(){
         peerInfo.channel = 0;
         peerInfo.encrypt = false;
         esp_err_t result = esp_now_add_peer(&peerInfo);
-        if (result != ESP_OK){
+        if (result != ESP_OK) {
             Serial.printf("ERROR: Failed to add Node %u | %d\n", node->nodeId, result);
             return false;
         }
@@ -80,7 +80,7 @@ bool setupEspNow() {
     WiFi.mode(WIFI_STA);
     Serial.print("Base MAC: ");
     Serial.println(WiFi.macAddress());
-    if (esp_now_init() != ESP_OK){
+    if (esp_now_init() != ESP_OK) {
         Serial.println("ERROR: ESP-NOW initialization failed");
         return false;
     }
@@ -91,7 +91,7 @@ bool setupEspNow() {
 // =====================================================
 // Setup
 // =====================================================
-void setup(){
+void setup() {
     Serial.begin(115200);
     delay(1000);
     Serial.println();
@@ -102,9 +102,9 @@ void setup(){
     Serial.println();
     nodeManager.begin();
 
-    if (!setupEspNow()){
+    if (!setupEspNow()) {
         Serial.println("SYSTEM HALTED");
-        while (true){
+        while (true) {
             delay(1000);
         }
     }
@@ -117,6 +117,6 @@ void setup(){
 // =====================================================
 // Main loop
 // =====================================================
-void loop(){
+void loop() {
     pollingEngine.update();
 }
