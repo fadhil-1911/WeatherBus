@@ -47,6 +47,7 @@ uint8_t baseMac[] = {
 // Polynomial: 0x31
 // =====================================================
 
+
 uint8_t sht41Crc8(const uint8_t* data, uint8_t length) {
     uint8_t crc = 0xFF;
 
@@ -169,8 +170,7 @@ void sendSensorData(uint16_t requestSequence) {
     SensorDataPacket packet{};
 
     packet.header.protocolVersion = PROTOCOL_VERSION;
-    packet.header.packetType =
-        static_cast<uint8_t>(PacketType::SENSOR_DATA);
+    packet.header.packetType = static_cast<uint8_t>(PacketType::SENSOR_DATA);
 
     packet.header.nodeId = NODE_ID;
     packet.header.flags = 0;
@@ -191,7 +191,8 @@ void sendSensorData(uint16_t requestSequence) {
         Serial.printf(
             "TX: SENSOR_DATA | Node=%u | Seq=%u | T=%.2f C | RH=%.2f %%\n",
             NODE_ID,
-            requestSequence,
+            //requestSequence,
+            packet.header.sequence, // Use the actual sequence sent
             temperature,
             humidity);
     } else {
