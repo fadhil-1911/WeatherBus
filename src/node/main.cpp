@@ -6,7 +6,7 @@
 /*
   Module    : Sensor Node - Main Application
   Transport : ESP-NOW
-  Phase     : PHASE 2B.1 - Invalid Packet Handling
+  Phase     : PHASE 2B.4 – Sequence Validation
 */
 
 #include <Arduino.h>
