@@ -1,12 +1,12 @@
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                    WeatherBus
 //                   Version: 1.0
-//             Last Updated: 2026-09-06
+//             Last Updated: 2026-09-07
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /*
   Module  : Base Station - Main Application
   Transport : ESP-NOW
-  Phase   : PHASE 2B.4 – Sequence Validation
+  Phase   : PHASE 2B.5 - Sensor Data Validation
 */
 
 #include <Arduino.h>

@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 
-**Last Updated:** 2026-09-06
+**Last Updated:** 2026-09-07
 
 ---
 
@@ -10,13 +10,13 @@
 
 **Transport:** ESP-NOW
 
-**Phase:** PHASE 2B.1 - Invalid Packet Handling
+**Current Phase:** PHASE 2B.5 - Sensor Data Validation
 
 ---
 
 ## Updates
 
-* Added ESP-NOW initialization and peer configuration.
+* Added ESP-NOW initialization and peer configuration
 * Added DATA_REQUEST reception and validation.
 * Added SENSOR_DATA response handling.
 * Added WeatherBus protocol header validation.
@@ -36,12 +36,20 @@
 * Added Node ID validation at Node.
 * Added payload length validation for DATA_REQUEST.
 * Invalid packets are rejected without generating a SENSOR_DATA response.
+* Added Node ID validation at Base.
+* Added current-node validation at Base.
+* Added SENSOR_DATA sequence validation at Base.
+* Responses with unexpected sequence numbers are rejected.
+* Added sensor temperature validation at Base.
+* Added sensor humidity validation at Base.
+* Added non-finite floating-point value validation using `isfinite()`.
+* Invalid sensor values are rejected without being accepted as valid SENSOR_DATA.
 
 ---
 
 ## Hardware Test
 
-Current Phase 2B.1 hardware configuration:
+Current Phase 2B.5 hardware configuration:
 
 * 1 × WeatherBus Base
 * 2 × WeatherBus Nodes
@@ -96,29 +104,149 @@ Previously verified:
 
 **PASS**
 
-Normal operation verified after adding invalid packet handling:
+Verified:
 
-* Base → Node DATA_REQUEST continues to operate normally.
-* Node 1 responds correctly with real SHT41 data.
-* Node 2 responds correctly with real SHT41 data.
-* Request sequence remains synchronized.
-* SHT41 temperature and humidity readings are received correctly.
-* Response time remains below the 200 ms timeout.
-* Invalid packet validation does not interfere with normal communication.
+* Invalid packet size handling.
+* Protocol version validation.
+* Packet type validation.
+* Node ID validation.
+* Payload length validation for DATA_REQUEST.
+* Invalid packets are rejected without generating a SENSOR_DATA response.
 
-### Invalid Packet Handling
+Normal communication remained unaffected after invalid packet handling was implemented.
 
-The Node now validates incoming DATA_REQUEST packets before processing them.
+---
 
-Validation includes:
+## Phase 2B.2 Test Status
+
+**PASS**
+
+Verified:
+
+* Node response timeout.
+* Node offline detection.
+* Continued polling of available nodes.
+* Automatic node recovery after reconnection.
+* Repeated node disconnect/reconnect operation.
+
+The Base continues polling other nodes when one node becomes unavailable.
+
+---
+
+## Phase 2B.3 Test Status
+
+**PASS**
+
+Verified:
+
+* SHT41 communication failure detection.
+* SENSOR_READ_FAILED handling.
+* No fake sensor data is transmitted when the SHT41 read fails.
+* Node firmware continues running during sensor failure.
+* SHT41 operation recovers after the sensor is reconnected.
+
+---
+
+## Phase 2B.4 Test Status
+
+**PASS — LOCKED**
+
+Verified:
+
+* Base stores the expected sequence for each DATA_REQUEST.
+* Node echoes the request sequence in SENSOR_DATA.
+* Base rejects responses with unexpected sequence numbers.
+* Sequence mismatch does not generate a valid WEATHERBUS RX result.
+* Timeout occurs when no valid matching response is received within 200 ms.
+* Normal sequence synchronization resumes after the test condition is removed.
+
+---
+
+## Phase 2B.5 Test Status
+
+**PASS — LOCKED**
+
+### Sensor Data Validation
+
+The Base now validates the actual sensor values after packet, Node ID, and sequence validation.
+
+Temperature validation:
+
+```text
+-40.0 °C ≤ Temperature ≤ 85.0 °C
+```
+
+Humidity validation:
+
+```text
+0.0 % ≤ Humidity ≤ 100.0 %
+```
+
+Non-finite floating-point values are also rejected:
+
+```text
+NaN
++Infinity
+-Infinity
+```
+
+### Validation Order
+
+The Base now follows this validation sequence:
 
 1. Packet size
 2. Protocol version
 3. Packet type
-4. Node ID
-5. Payload length
+4. Payload length
+5. Node ID
+6. Current Node
+7. Sequence
+8. Temperature
+9. Humidity
+10. Accept SENSOR_DATA
+11. Mark Node online
 
-If validation fails, the packet is rejected and no SENSOR_DATA response is generated.
+Invalid sensor data is rejected before the packet is accepted as valid SENSOR_DATA.
+
+### Negative Test
+
+A temporary invalid temperature of:
+
+```text
+150.00 °C
+```
+
+was intentionally transmitted by Node 2.
+
+Expected rejection was observed:
+
+```text
+RX: Invalid temperature | 150.00 C
+TIMEOUT: Node 2 did not respond within 200 ms
+```
+
+The Base did not generate a valid WEATHERBUS RX block for the invalid packet.
+
+Node 1 continued normal operation while Node 2 was producing invalid sensor data.
+
+### Post-Restore Regression
+
+Node 2 was restored to normal sensor operation.
+
+Regression testing verified:
+
+* Node 1 continues to return valid SHT41 data.
+* Node 2 returns valid SHT41 data.
+* Request and response sequences remain synchronized.
+* No sequence mismatch occurred.
+* No timeout occurred during normal operation.
+* No invalid sensor data was reported.
+* Response time remained well below the 200 ms timeout.
+* Sequential polling continues correctly.
+
+Therefore:
+
+**WeatherBus V1.0 Phase 2B.5 is functionally validated and LOCKED.**
 
 ---
 
@@ -150,13 +278,45 @@ Each Node responds only when a valid DATA_REQUEST addressed to that Node is rece
 
 The Node performs packet validation before accessing the sensor or generating a response.
 
+The Base validates the received SENSOR_DATA before accepting it as valid data.
+
+The Base validates:
+
+```text
+Packet
+  ↓
+Node
+  ↓
+Sequence
+  ↓
+Temperature
+  ↓
+Humidity
+  ↓
+Valid SENSOR_DATA
+```
+
 ---
 
-## Phase 2B.1 Result
+## Current Phase Status
 
-**WeatherBus V1.0 Phase 2B.1 is functionally validated for normal operation with invalid packet handling implemented.**
+```text
+Phase 1       PASS
+Phase 2A      PASS
+Phase 2B.1    PASS
+Phase 2B.2    PASS
+Phase 2B.3    PASS
+Phase 2B.4    PASS 🔒
+Phase 2B.5    PASS 🔒
+```
 
-The current hardware test is limited to **two Nodes**.
+The current implementation has been tested using:
+
+* 1 × Base
+* 2 × Nodes
+* 2 × SHT41 sensors
+
+The current hardware test is limited to two Nodes.
 
 The software architecture uses logical Node IDs and can be extended when additional hardware becomes available.
 
@@ -164,12 +324,34 @@ The software architecture uses logical Node IDs and can be extended when additio
 
 ## Next Phase
 
-**PHASE 2B.2 - Timeout & Node Failure Handling**
+**PHASE 2B.6 - Duplicate / Stale Response Handling**
 
 Planned focus:
 
-* Node response timeout
-* Node offline detection
-* Continued polling of available nodes
-* Node recovery after returning online
-* Stable operation during repeated node disconnect/reconnect events
+* Handling duplicate SENSOR_DATA responses.
+* Handling stale responses from previous requests.
+* Ensuring an already-completed request cannot be completed twice.
+* Verifying that delayed packets do not corrupt the current polling cycle.
+* Maintaining stable sequential polling after duplicate or stale packets.
+
+---
+
+## Phase 2B Objective
+
+Phase 2B is progressively strengthening the reliability of WeatherBus communication.
+
+Current protection layers include:
+
+```text
+Invalid Packet
+      ↓
+Node Failure
+      ↓
+Sensor Failure
+      ↓
+Sequence Validation
+      ↓
+Sensor Data Validation
+```
+
+Each layer is independently tested before moving to the next phase.
