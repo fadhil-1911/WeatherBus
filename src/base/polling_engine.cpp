@@ -1,5 +1,7 @@
 #include "polling_engine.h"
 
+#include <cmath> // For std::isnan
+
 #include <WiFi.h>
 #include <esp_now.h>
 
@@ -152,6 +154,31 @@ void PollingEngine::onSensorData(
             "RX: Sequence mismatch | Expected %u | Received %u\n",
             expectedSequence,
             sequence);
+
+        return;
+    }
+
+    // -------------------------------------------------
+    // Validate Sensor Data
+    // -------------------------------------------------
+    if (!isfinite(temperature) ||
+        temperature < -40.0f ||
+        temperature > 85.0f) {
+
+        Serial.printf(
+            "RX: Invalid temperature | %.2f C\n",
+            temperature);
+
+        return;
+    }
+
+    if (!isfinite(humidity) ||
+        humidity < 0.0f ||
+        humidity > 100.0f) {
+
+        Serial.printf(
+            "RX: Invalid humidity | %.2f %%\n",
+            humidity);
 
         return;
     }
