@@ -112,6 +112,14 @@ void PollingEngine::onSensorData(
     float temperature,
     float humidity) {
 
+    if (state != State::WAIT_RESPONSE) {
+
+        Serial.println(
+            "RX: Ignored response | No active request");
+
+        return;
+    }
+
     NodeInfo* node = nodeManager.getNodeById(nodeId);
 
     // -------------------------------------------------
