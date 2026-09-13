@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 
-**Last Updated:** 2026-09-07
+**Last Updated:** 2026-09-13
 
 ---
 
@@ -10,13 +10,13 @@
 
 **Transport:** ESP-NOW
 
-**Current Phase:** PHASE 2B.5 - Sensor Data Validation
+**Current Phase:** PHASE 2B.7 - Node Recovery & Repeated Failure
 
 ---
 
 ## Updates
 
-* Added ESP-NOW initialization and peer configuration
+* Added ESP-NOW initialization and peer configuration.
 * Added DATA_REQUEST reception and validation.
 * Added SENSOR_DATA response handling.
 * Added WeatherBus protocol header validation.
@@ -44,12 +44,19 @@
 * Added sensor humidity validation at Base.
 * Added non-finite floating-point value validation using `isfinite()`.
 * Invalid sensor values are rejected without being accepted as valid SENSOR_DATA.
+* Added Base response-state validation.
+* SENSOR_DATA received when no request is active is rejected.
+* Added late response handling after request timeout.
+* Verified that delayed SENSOR_DATA does not corrupt the current polling cycle.
+* Verified Node failure, timeout, recovery, and continued sequential polling.
+* Verified Node recovery without restarting the Base.
+* Verified repeated normal operation after Node reconnection.
 
 ---
 
 ## Hardware Test
 
-Current Phase 2B.5 hardware configuration:
+Current Phase 2B.7 hardware configuration:
 
 * 1 × WeatherBus Base
 * 2 × WeatherBus Nodes
@@ -88,15 +95,15 @@ constexpr uint8_t NODE_ID = 2;
 
 Previously verified:
 
-* Base → Node DATA_REQUEST
-* Node → Base SENSOR_DATA
-* Node 1 and Node 2 sequential polling
-* Temperature and humidity from real SHT41 sensors
-* Sequence synchronization
-* Response time below 200 ms
-* Node timeout handling
-* Continued operation when a node is offline
-* Automatic recovery when the node returns online
+* Base → Node DATA_REQUEST.
+* Node → Base SENSOR_DATA.
+* Node 1 and Node 2 sequential polling.
+* Temperature and humidity from real SHT41 sensors.
+* Sequence synchronization.
+* Response time below 200 ms.
+* Node timeout handling.
+* Continued operation when a node is offline.
+* Automatic recovery when the node returns online.
 
 ---
 
@@ -250,6 +257,154 @@ Therefore:
 
 ---
 
+## Phase 2B.6 Test Status
+
+**PASS — LOCKED**
+
+### Late Response Handling
+
+The Base now verifies that a `SENSOR_DATA` response is only processed when the polling engine is actively waiting for a response.
+
+The Base rejects responses when:
+
+```text
+State != WAIT_RESPONSE
+```
+
+The protection is implemented before Node ID, current-node, sequence, and sensor-data validation.
+
+### Controlled Negative Test
+
+Node 2 was temporarily configured with an artificial:
+
+```text
+300 ms
+```
+
+response delay.
+
+The Base response timeout remained:
+
+```text
+200 ms
+```
+
+Observed behaviour:
+
+```text
+TX: DATA_REQUEST -> Node 2 | Sequence 654
+TIMEOUT: Node 2 did not respond within 200 ms
+RX: Ignored response | No active request
+```
+
+The delayed `SENSOR_DATA` response was therefore ignored.
+
+### Regression Test
+
+After removing the artificial delay:
+
+* Node 1 returned normal SHT41 data.
+* Node 2 returned normal SHT41 data.
+* Sequential polling resumed normally.
+* Response times remained well below 200 ms.
+* No unexpected state behaviour was observed.
+
+Therefore:
+
+**WeatherBus V1.0 Phase 2B.6 is functionally validated and LOCKED.**
+
+---
+
+## Phase 2B.7 Test Status
+
+**PASS — LOCKED**
+
+### Node Recovery & Repeated Failure
+
+Phase 2B.7 verifies that the Base remains operational when a Node becomes unavailable and subsequently returns online.
+
+The test sequence was:
+
+```text
+1. Node 1 + Node 2 normal
+2. Node 2 operates for several cycles
+3. Node 2 power is disconnected
+4. Base detects Node 2 timeout
+5. Node 1 continues operating
+6. Node 2 is powered on again
+7. Node 2 responds normally
+8. Sequential polling returns to normal
+```
+
+### Failure Detection
+
+When Node 2 was unavailable:
+
+```text
+TX: DATA_REQUEST -> Node 2 | Sequence 444
+TIMEOUT: Node 2 did not respond within 200 ms
+```
+
+The Base correctly detected the Node failure.
+
+### Continued Operation
+
+The Base immediately continued polling Node 1:
+
+```text
+TX: DATA_REQUEST -> Node 1 | Sequence 445
+
+Node ID      : 1
+Sequence     : 445
+Response Time: 12 ms
+```
+
+Node 1 continued operating normally while Node 2 was unavailable.
+
+### Node Recovery
+
+After Node 2 was powered on again:
+
+```text
+TX: DATA_REQUEST -> Node 2 | Sequence 446
+
+Node ID      : 2
+Sequence     : 446
+Response Time: 13 ms
+```
+
+Node 2 successfully returned to normal operation without requiring a Base restart.
+
+### Post-Recovery Regression
+
+Sequential polling continued:
+
+```text
+Node 1 → Sequence 447
+Node 2 → Sequence 448
+Node 1 → Sequence 449
+Node 2 → Sequence 450
+```
+
+Verified:
+
+* Node 2 timeout detection.
+* Node 1 continued operating during Node 2 failure.
+* Node 2 successfully recovered.
+* Node 2 returned valid SHT41 data after recovery.
+* Sequence numbers remained synchronized.
+* No sequence mismatch occurred.
+* No unexpected timeout occurred after recovery.
+* Sequential polling continued correctly.
+* Base did not require a restart.
+* Polling engine did not become stuck after Node failure.
+
+Therefore:
+
+**WeatherBus V1.0 Phase 2B.7 is functionally validated and LOCKED.**
+
+---
+
 ## Current Architecture
 
 ```text
@@ -287,6 +442,8 @@ Packet
   ↓
 Node
   ↓
+Current Node
+  ↓
 Sequence
   ↓
 Temperature
@@ -295,6 +452,14 @@ Humidity
   ↓
 Valid SENSOR_DATA
 ```
+
+The Base also verifies that a response is only processed while the polling engine is in:
+
+```text
+WAIT_RESPONSE
+```
+
+Responses received outside an active request are ignored.
 
 ---
 
@@ -308,6 +473,8 @@ Phase 2B.2    PASS
 Phase 2B.3    PASS
 Phase 2B.4    PASS 🔒
 Phase 2B.5    PASS 🔒
+Phase 2B.6    PASS 🔒
+Phase 2B.7    PASS 🔒
 ```
 
 The current implementation has been tested using:
@@ -324,21 +491,26 @@ The software architecture uses logical Node IDs and can be extended when additio
 
 ## Next Phase
 
-**PHASE 2B.6 - Duplicate / Stale Response Handling**
+**PHASE 2B.8 - Communication Reliability & Edge Cases**
 
-Planned focus:
+The next phase will first be defined after reviewing the complete Phase 2B protection chain.
 
-* Handling duplicate SENSOR_DATA responses.
-* Handling stale responses from previous requests.
-* Ensuring an already-completed request cannot be completed twice.
-* Verifying that delayed packets do not corrupt the current polling cycle.
-* Maintaining stable sequential polling after duplicate or stale packets.
+Potential areas for investigation include:
+
+* ESP-NOW transmission failure handling.
+* Unexpected or corrupted communication events.
+* Repeated timeout behaviour.
+* Boundary conditions around the 200 ms response timeout.
+* Sequence number wrap-around.
+* Additional communication edge cases.
+
+No implementation is defined for Phase 2B.8 until the requirements are reviewed and confirmed.
 
 ---
 
 ## Phase 2B Objective
 
-Phase 2B is progressively strengthening the reliability of WeatherBus communication.
+Phase 2B progressively strengthens the reliability of WeatherBus communication.
 
 Current protection layers include:
 
@@ -352,6 +524,12 @@ Sensor Failure
 Sequence Validation
       ↓
 Sensor Data Validation
+      ↓
+Response State Validation
+      ↓
+Node Recovery
 ```
 
 Each layer is independently tested before moving to the next phase.
+
+**Phase 2B.7 is functionally validated and LOCKED.**

@@ -1,12 +1,12 @@
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                    WeatherBus
 //                   Version: 1.0
-//             Last Updated: 2026-09-07
+//             Last Updated: 2026-09-13
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /*
   Module    : Sensor Node - Main Application
   Transport : ESP-NOW
-  Phase     : PHASE 2B.5 - Sensor Data Validation
+  Phase     : PHASE 2B.7 - Node Recovery & Repeated Failure
 */
 
 #include <Arduino.h>
@@ -46,7 +46,6 @@ uint8_t baseMac[] = {
 // SHT41 CRC-8
 // Polynomial: 0x31
 // =====================================================
-
 
 uint8_t sht41Crc8(const uint8_t* data, uint8_t length) {
     uint8_t crc = 0xFF;
@@ -150,7 +149,6 @@ bool readSHT41(float& temperature, float& humidity) {
     if (humidity > 100.0f) {
         humidity = 100.0f;
     }
-
     return true;
 }
 
@@ -168,10 +166,8 @@ void sendSensorData(uint16_t requestSequence) {
     }
 
     SensorDataPacket packet{};
-
     packet.header.protocolVersion = PROTOCOL_VERSION;
     packet.header.packetType = static_cast<uint8_t>(PacketType::SENSOR_DATA);
-
     packet.header.nodeId = NODE_ID;
     packet.header.flags = 0;
     packet.header.sequence = requestSequence;
@@ -204,10 +200,7 @@ void sendSensorData(uint16_t requestSequence) {
 // Receive DATA_REQUEST
 // =====================================================
 
-void onDataReceived(
-    const uint8_t* mac,
-    const uint8_t* data,
-    int len) {
+void onDataReceived(const uint8_t* mac, const uint8_t* data, int len) {
     if (len != sizeof(Header)) {
         Serial.printf(
             "RX ERROR: Invalid packet size | Received=%d | Expected=%u\n",
