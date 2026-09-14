@@ -189,53 +189,7 @@ bool setupBME280() {
 // ==================================wq===================
 // BME280 recovery
 // =====================================================
-// =====================================================
-// BME280 recovery - diagnostic
-// =====================================================
 
-bool recoverBME280() {
-    Serial.println("BME280 recovery attempt...");
-
-    // Re-initialize BME280
-    if (!bme.begin(BME280_I2C_ADDRESS, &Wire)) {
-        Serial.println("BME280 recovery failed");
-        return false;
-    }
-
-    Serial.println("BME280 recovery OK");
-
-    // -------------------------------------------------
-    // Diagnostic: sensor identity
-    // -------------------------------------------------
-
-    Serial.printf(
-        "BME280 sensor ID: 0x%02X\n",
-        bme.sensorID());
-
-    // -------------------------------------------------
-    // Diagnostic: multiple readings after recovery
-    // -------------------------------------------------
-
-    for (uint8_t i = 1; i <= 3; i++) {
-        delay(100);
-
-        float temperature = bme.readTemperature();
-        float pressure = bme.readPressure() / 100.0F;
-        float humidity = bme.readHumidity();
-
-        Serial.printf(
-            "Recovery reading %u: "
-            "T=%.2f C | P=%.2f hPa | RH=%.2f %%\n",
-            i,
-            temperature,
-            pressure,
-            humidity);
-    }
-
-    return true;
-}
-
-/*
 bool recoverBME280() {
     Serial.println("BME280 recovery attempt...");
 
@@ -246,7 +200,7 @@ bool recoverBME280() {
 
     Serial.println("BME280 recovery OK");
     return true;
-} */
+} 
 
 // =====================================================
 // Read BME280
