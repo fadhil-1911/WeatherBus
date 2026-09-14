@@ -1,12 +1,12 @@
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                    WeatherBus
 //                   Version: 1.0
-//             Last Updated: 2026-09-13
+//             Last Updated: 2026-09-14
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 /*
   Module    : Sensor Node - Main Application
   Transport : ESP-NOW
-  Phase     : PHASE 2B.7 - Node Recovery & Repeated Failure
+  Phase     : Phase 2C - BME280 integration
 */
 
 #include <Arduino.h>
