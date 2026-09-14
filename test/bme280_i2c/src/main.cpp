@@ -1,4 +1,4 @@
-
+/*
 #include <Adafruit_BME280.h>
 #include <Adafruit_Sensor.h>
 #include <Arduino.h>
@@ -66,7 +66,7 @@ void loop() {
     Serial.println();
 
     delay(2000);
-}
+} */
 
 
 

@@ -109,8 +109,10 @@ void PollingEngine::sendRequest() {
 void PollingEngine::onSensorData(
     uint8_t nodeId,
     uint16_t sequence,
+    uint8_t flags,
     float temperature,
-    float humidity) {
+    float humidity,
+    float pressure) {
 
     if (state != State::WAIT_RESPONSE) {
 
@@ -191,6 +193,17 @@ void PollingEngine::onSensorData(
         return;
     }
 
+    if (flags & FLAG_PRESSURE_VALID) {
+        if (!isfinite(pressure) ||
+            pressure < 300.0f ||
+            pressure > 1100.0f) {
+            Serial.printf(
+                "RX: Invalid pressure | %.2f hPa\n",
+                pressure);
+            return;
+        }
+    }
+
     // -------------------------------------------------
     // Valid response
     // -------------------------------------------------
@@ -203,8 +216,16 @@ void PollingEngine::onSensorData(
     Serial.println("========== WEATHERBUS RX ==========");
     Serial.printf("Node ID      : %u\n", nodeId);
     Serial.printf("Sequence     : %u\n", sequence);
+    Serial.printf("Flags        : 0x%02X\n", flags);
     Serial.printf("Temperature  : %.2f C\n", temperature);
     Serial.printf("Humidity     : %.2f %%\n", humidity);
+
+    if (flags & FLAG_PRESSURE_VALID) {
+        Serial.printf(
+            "Pressure     : %.2f hPa\n",
+            pressure);
+    }
+
     Serial.printf("Response Time: %lu ms\n", responseTime);
     Serial.println("===================================");
 

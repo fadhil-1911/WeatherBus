@@ -45,8 +45,10 @@ void onDataReceived(const uint8_t* mac, const uint8_t* data, int len) {
     pollingEngine.onSensorData(
         packet.header.nodeId,
         packet.header.sequence,
+        packet.header.flags,
         packet.payload.temperature,
-        packet.payload.humidity);
+        packet.payload.humidity,
+        packet.payload.pressure);
 }
 
 // =====================================================
@@ -97,7 +99,6 @@ void setup() {
     Serial.println();
     Serial.println("================================");
     Serial.println("WeatherBus V1.0");
-    Serial.println("PHASE 2A - Multi Node Dummy");
     Serial.println("================================");
     Serial.println();
     nodeManager.begin();

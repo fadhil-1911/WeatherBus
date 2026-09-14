@@ -13,8 +13,10 @@ class PollingEngine {
     void onSensorData(
         uint8_t nodeId,
         uint16_t sequence,
+        uint8_t flags,
         float temperature,
-        float humidity);
+        float humidity,
+        float pressure);
 
   private:
     enum class State {
