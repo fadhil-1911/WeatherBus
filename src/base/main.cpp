@@ -6,7 +6,7 @@
 /*
   Module  : Base Station - Main Application
   Transport : ESP-NOW
-  Phase   : Phase 2C - BME280 integration
+  Phase   : Phase 2
 */
 
 #include <Arduino.h>

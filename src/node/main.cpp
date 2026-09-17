@@ -200,7 +200,7 @@ bool recoverBME280() {
 
     Serial.println("BME280 recovery OK");
     return true;
-} 
+}
 
 // =====================================================
 // Read BME280
@@ -236,11 +236,130 @@ bool readBME280(float& pressure) {
     return true;
 }
 
-
-
 // =====================================================
 // Send SENSOR_DATA
 // =====================================================
+
+void sendSensorData(uint16_t requestSequence) {
+
+    float temperature = 0.0f;
+    float humidity = 0.0f;
+    float pressure = 0.0f;
+
+    uint8_t sensorFlags = 0;
+
+    // -------------------------------------------------
+    // SHT41
+    // -------------------------------------------------
+
+    if (ENABLE_SHT41) {
+
+        if (readSHT41(temperature, humidity)) {
+
+            sensorFlags |= FLAG_TEMPERATURE_VALID;
+            sensorFlags |= FLAG_HUMIDITY_VALID;
+
+        } else {
+
+            Serial.println(
+                "WARNING: SHT41 unavailable");
+        }
+    }
+
+    // -------------------------------------------------
+    // BME280
+    // -------------------------------------------------
+
+    if (ENABLE_BME280) {
+
+        if (readBME280(pressure)) {
+
+            sensorFlags |= FLAG_PRESSURE_VALID;
+
+        } else {
+
+            Serial.println(
+                "WARNING: BME280 pressure unavailable");
+        }
+    }
+
+    // -------------------------------------------------
+    // Build SENSOR_DATA packet
+    // -------------------------------------------------
+
+    SensorDataPacket packet{};
+
+    packet.header.protocolVersion =
+        PROTOCOL_VERSION;
+
+    packet.header.packetType =
+        static_cast<uint8_t>(
+            PacketType::SENSOR_DATA);
+
+    packet.header.nodeId =
+        NODE_ID;
+
+    packet.header.flags =
+        sensorFlags;
+
+    packet.header.sequence =
+        requestSequence;
+
+    packet.header.payloadLength =
+        sizeof(SensorDataPayload);
+
+    packet.header.crc16 = 0;
+
+    packet.header.reserved = 0;
+
+    packet.payload.temperature =
+        temperature;
+
+    packet.payload.humidity =
+        humidity;
+
+    packet.payload.pressure =
+        pressure;
+
+    // -------------------------------------------------
+    // ESP-NOW transmission
+    // -------------------------------------------------
+
+    esp_err_t result = esp_now_send(
+        baseMac,
+        reinterpret_cast<uint8_t*>(&packet),
+        sizeof(packet));
+
+    if (result == ESP_OK) {
+
+        Serial.printf(
+            "TX: SENSOR_DATA | "
+            "Node=%u | "
+            "Seq=%u | "
+            "Flags=0x%02X | "
+            "T=%.2f C | "
+            "RH=%.2f %% | "
+            "P=%.2f hPa\n",
+
+            NODE_ID,
+            packet.header.sequence,
+            packet.header.flags,
+            packet.payload.temperature,
+            packet.payload.humidity,
+            packet.payload.pressure);
+
+    } else {
+
+        Serial.printf(
+            "TX ERROR: %d\n",
+            result);
+    }
+}
+
+/* sht41 fails to read temperature and humidity, bme280 fails to read pressure, or both sensors fail to read
+   in any of these cases, the node will not send a SENSOR_DATA packet. The base station will not receive any data from the node.
+   This is a design choice to ensure that only valid sensor data is transmitted. If a sensor fails, it is better to not send any data
+   than to send invalid data. The base station can then take appropriate action, such as logging the error or alerting the user.
 
 void sendSensorData(uint16_t requestSequence) {
     float temperature = 0.0f;
@@ -317,7 +436,7 @@ void sendSensorData(uint16_t requestSequence) {
             "TX ERROR: %d\n",
             result);
     }
-}
+} */
 
 // =====================================================
 // Receive DATA_REQUEST
@@ -436,13 +555,22 @@ void setup() {
     if (ENABLE_SHT41) {
         if (!setupSHT41()) {
             Serial.println("SHT41 FAILED");
+            Serial.println(
+                "SHT41 unavailable - continuing without temperature/humidity");
+        }
+    }
+
+    /*
+    if (ENABLE_SHT41) {
+        if (!setupSHT41()) {
+            Serial.println("SHT41 FAILED");
             Serial.println("SYSTEM HALTED");
 
             while (true) {
                 delay(1000);
             }
         }
-    }
+    } */
 
     if (ENABLE_BME280) {
         if (!setupBME280()) {
